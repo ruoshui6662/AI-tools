@@ -1,0 +1,84 @@
+{
+  "delivery": {
+    "channel": "feishu",
+    "agent_id": "default",
+    "target_user": "ou_e2ee815b68082758c58e06281d136e32",
+    "target_session": "1d136e32"
+  },
+  "rss_feeds": {
+    "国际通讯社": [
+      {"name": "Reuters", "url": "https://feeds.reuters.com/reuters/topNews", "lang": "en", "tier": 1},
+      {"name": "AP", "url": "https://rsshub.app/apnews/topics/apf-topnews", "lang": "en", "tier": 1},
+      {"name": "AFP", "url": "https://rsshub.org/afp/en", "lang": "en", "tier": 1},
+      {"name": "BBC", "url": "https://feeds.bbci.co.uk/news/rss.xml", "lang": "en", "tier": 1},
+      {"name": "NPR", "url": "https://feeds.npr.org/1001/rss.xml", "lang": "en", "tier": 1}
+    ],
+    "国际主流媒体": [
+      {"name": "CNN", "url": "http://rss.cnn.com/rss/edition.rss", "lang": "en", "tier": 1},
+      {"name": "NYT", "url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", "lang": "en", "tier": 1},
+      {"name": "Guardian", "url": "https://www.theguardian.com/world/rss", "lang": "en", "tier": 1},
+      {"name": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "lang": "en", "tier": 2},
+      {"name": "NHK", "url": "https://rsshub.app/nhk/news", "lang": "zh", "tier": 2}
+    ],
+    "中国官方媒体": [
+      {"name": "南华早报", "url": "https://rsshub.app/scmp/1", "lang": "en", "tier": 2}
+    ],
+    "财经媒体": [
+      {"name": "Bloomberg", "url": "https://feeds.bloomberg.com/markets/news.rss", "lang": "en", "tier": 1},
+      {"name": "FT", "url": "https://rsshub.app/ft/news/0", "lang": "en", "tier": 1},
+      {"name": "WSJ", "url": "https://rsshub.app/wsj/en-us", "lang": "en", "tier": 2},
+      {"name": "财新", "url": "https://rsshub.app/caixin/latest", "lang": "zh", "tier": 1},
+      {"name": "第一财经", "url": "https://rsshub.app/yicai/brief", "lang": "zh", "tier": 2}
+    ]
+  },
+  "twitter_accounts": [
+    {"handle": "@BreakingNews", "desc": "突发新闻"},
+    {"handle": "@Reuters", "desc": "路透社"},
+    {"handle": "@BBCBreaking", "desc": "BBC突发"},
+    {"handle": "@AP", "desc": "美联社"},
+    {"handle": "@caboramavip", "desc": "全球突发"},
+    {"handle": "@ChinaAviation", "desc": "中国航空"}
+  ],
+  "categories": {
+    "politics": {
+      "emoji": "🏛️",
+      "name": "政治",
+      "keywords": ["总统", "首相", "主席", "外长", "部长", "峰会", "会谈", "制裁", "关税", "外交", "联合国", "北约", "欧盟", "议会", "选举", "弹劾", "访华", "访美", "G7", "G20", "APEC", "白宫", "五角大楼", "国务院", "国会", "参议院", "众议院",
+        "president", "minister", "summit", "sanction", "tariff", "diplomatic", "UN", "NATO", "EU", "election", "White House", "Pentagon", "Congress", "Senate", "Secretary"]
+    },
+    "economy": {
+      "emoji": "💰",
+      "name": "经济",
+      "keywords": ["GDP", "通胀", "降息", "加息", "利率", "股市", "汇率", "贸易", "关税", "供应链", "债务", "赤字", "就业", "失业率", "CPI", "PPI", "PMI", "央行", "美联储", "ECB", "财报", "营收", "IPO", "上市", "融资", "并购", "破产",
+        "inflation", "interest rate", "stock", "trade", "supply chain", "debt", "employment", "Fed", "central bank", "earnings", "IPO", "merger", "bankrupt", "recession"]
+    },
+    "military": {
+      "emoji": "⚔️",
+      "name": "军事",
+      "keywords": ["军", "导弹", "航母", "战斗机", "轰炸", "空袭", "军事演习", "军演", "武器", "核", "潜艇", "无人机", "冲突", "战争", "停火", "和谈", "占领", "战线", "军援", "国防", "解放军", "美军", "俄军", "台海", "南海", "中东",
+        "military", "missile", "aircraft carrier", "fighter", "airstrike", "drone", "nuclear", "submarine", "conflict", "war", "ceasefire", "defense", "Pentagon", "NATO"]
+    },
+    "tech": {
+      "emoji": "💻",
+      "name": "科技",
+      "keywords": ["AI", "人工智能", "芯片", "半导体", "量子", "5G", "6G", "机器人", "自动驾驶", "电动车", "SpaceX", "星舰", "特斯拉", "苹果", "谷歌", "微软", "英伟达", "OpenAI", "大模型", "ChatGPT", "数据", "网络安全", "黑客", "区块链", "加密货币",
+        "artificial intelligence", "chip", "semiconductor", "quantum", "robot", "autonomous", "SpaceX", "Tesla", "Apple", "Google", "Microsoft", "NVIDIA", "OpenAI", "cybersecurity", "hack", "crypto"]
+    },
+    "society": {
+      "emoji": "🌍",
+      "name": "社会",
+      "keywords": ["地震", "台风", "洪水", "火灾", "爆炸", "坠机", "事故", "救援", "疫情", "疫苗", "抗议", "示威", "罢工", "人质", "绑架", "恐袭", "难民",
+        "earthquake", "typhoon", "flood", "fire", "explosion", "crash", "accident", "rescue", "pandemic", "vaccine", "protest", "strike", "hostage", "terror", "refugee"]
+    }
+  },
+  "scoring": {
+    "tier1_source_bonus": 15,
+    "tier2_source_bonus": 8,
+    "keyword_match_base": 10,
+    "category_diversity_bonus": 5,
+    "breaking_news_bonus": 20,
+    "china_related_bonus": 10,
+    "max_items": 25,
+    "dedup_threshold": 0.6
+  }
+}
