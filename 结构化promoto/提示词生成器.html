@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>结构化提示词生成器</title>
+  <style>
+    :root {
+      --bg-1: #f3eadf;
+      --bg-2: #fbf7f1;
+      --panel: rgba(255, 251, 246, 0.68);
+      --card: rgba(255, 253, 249, 0.58);
+      --line: #e5d8c9;
+      --text: #2f241d;
+      --muted: #7e6d61;
+      --accent: #b85c38;
+      --accent-deep: #944427;
+      --secondary: #7a8b5a;
+      --shadow: 0 18px 46px rgba(125, 89, 61, 0.14);
+      --radius-lg: 26px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(184, 92, 56, 0.11), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(122, 139, 90, 0.09), transparent 28%),
+        linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 54%, #f6efe5 100%);
+      background-attachment: fixed;
+    }
+
+    .page {
+      width: min(1580px, calc(100% - 40px));
+      margin: 18px auto 32px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.5fr 0.95fr;
+      gap: 22px;
+      padding: 24px 26px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(255, 253, 249, 0.6), rgba(247, 240, 232, 0.42));
+      border: 1px solid rgba(255, 255, 255, 0.42);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px) saturate(145%);
+      -webkit-backdrop-filter: blur(22px) saturate(145%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      right: -80px;
+      top: -70px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(184, 92, 56, 0.14), transparent 68%);
+      pointer-events: none;
+    }
+
+    .hero h1 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 3.6vw, 50px);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 720px;
+      font-size: 14px;
+      line-height: 1.72;
+      color: var(--muted);
+    }
+
+    .hero-notes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      align-content: start;
+    }
+
+    .tip {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(247, 241, 234, 0.26));
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(16px) saturate(140%);
+      -webkit-backdrop-filter: blur(16px) saturate(140%);
+    }
+
+    .tip strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(880px, 1.38fr) minmax(360px, 0.72fr);
+      gap: 16px;
+      margin-top: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 18px;
+      border-radius: 24px;
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px) saturate(145%);
+      -webkit-backdrop-filter: blur(24px) saturate(145%);
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .editor-shell {
+      display: grid;
+      grid-template-columns: 148px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      min-height: 510px;
+    }
+
+    .editor-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .editor-header p,
+    .section-subtitle,
+    .preview-meta,
+    .hint,
+    .footer-note {
+      color: var(--muted);
+    }
+
+    .editor-header p {
+      margin: 6px 0 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+      animation: fadeUp 0.18s ease;
+      min-height: 100%;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .tab-card,
+    .group-card,
+    .field {
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.52);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    }
+
+    .tab-card + .tab-card,
+    .stack > * + * {
+      margin-top: 12px;
+    }
+
+    .tab-card {
+      min-height: 440px;
+    }
+
+    .field label,
+    .group-card label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #4e3a2d;
+    }
+
+    .section-title {
+      margin: 0 0 4px;
+      font-size: 16px;
+    }
+
+    .section-subtitle {
+      margin: 0 0 14px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid #dbcbbb;
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font: inherit;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.58);
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: rgba(184, 92, 56, 0.72);
+      box-shadow: 0 0 0 4px rgba(184, 92, 56, 0.12);
+    }
+
+    textarea {
+      min-height: 88px;
+      resize: vertical;
+    }
+
+    .toolbar,
+    .row-actions,
+    .tab-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent-deep), var(--accent));
+      box-shadow: 0 10px 24px rgba(184, 92, 56, 0.24);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 248, 241, 0.62);
+      color: var(--text);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+
+    .btn-ghost {
+      background: rgba(122, 139, 90, 0.14);
+      color: var(--secondary);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    }
+
+    .btn-danger {
+      background: rgba(220, 38, 38, 0.10);
+      color: #b91c1c;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+      position: sticky;
+      top: 18px;
+    }
+
+    .nav button {
+      padding: 12px 12px;
+      text-align: left;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255, 251, 246, 0.54), rgba(242, 232, 220, 0.4));
+      color: #6c5647;
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+        0 8px 20px rgba(125, 89, 61, 0.06);
+      backdrop-filter: blur(14px) saturate(135%);
+      -webkit-backdrop-filter: blur(14px) saturate(135%);
+    }
+
+    .nav button.active {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent-deep), var(--accent));
+      box-shadow: 0 12px 24px rgba(148, 68, 39, 0.24);
+    }
+
+    .nav button span {
+      display: block;
+      font-size: 10px;
+      line-height: 1.5;
+      margin-top: 4px;
+      opacity: 0.82;
+      font-weight: 500;
+    }
+
+    .group-card {
+      animation: fadeUp 0.18s ease;
+    }
+
+    .tab-actions {
+      margin-bottom: 12px;
+    }
+
+    .hint {
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .output {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+    }
+
+    .preview-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    pre {
+      margin: 0;
+      height: min(72vh, 860px);
+      min-height: 520px;
+      max-height: 72vh;
+      overflow: auto;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.48);
+      background: linear-gradient(180deg, rgba(255, 253, 249, 0.62), rgba(247, 241, 234, 0.5));
+      color: #352923;
+      font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.68;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        0 10px 24px rgba(125, 89, 61, 0.08);
+      backdrop-filter: blur(18px) saturate(135%);
+      -webkit-backdrop-filter: blur(18px) saturate(135%);
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 1180px) {
+      .hero,
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-notes {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .output {
+        position: static;
+      }
+    }
+
+    @media (max-width: 920px) {
+      .editor-shell {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+
+      .nav {
+        position: static;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(100% - 16px, 1580px);
+        margin: 8px auto 24px;
+      }
+
+      .hero,
+      .panel {
+        padding: 16px;
+        border-radius: 20px;
+      }
+
+      .grid.two,
+      .nav {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-notes {
+        grid-template-columns: 1fr;
+      }
+
+      pre {
+        height: auto;
+        min-height: 420px;
+        max-height: none;
+        font-size: 13px;
+      }
+
+      .tab-card {
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div>
+        <h1>结构化提示词生成器</h1>
+        <p>按板块填写内容，实时生成标准结构化 Prompt。</p>
+      </div>
+      <div class="hero-notes">
+        <div class="tip">
+          <strong>核心原则</strong>
+          模块清晰，层级明确。
+        </div>
+        <div class="tip">
+          <strong>交互方式</strong>
+          切换板块，专注填写。
+        </div>
+        <div class="tip">
+          <strong>输出形式</strong>
+          输出标准 Markdown Prompt。
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="panel">
+        <div class="editor-header">
+          <div>
+            <h2>填写板块</h2>
+            <p>选择板块并填写内容。</p>
+          </div>
+        </div>
+
+        <div class="editor-shell">
+          <nav class="nav" aria-label="板块导航">
+            <button class="active" type="button" data-target="base">基础信息<span>Role / Profile</span></button>
+            <button type="button" data-target="goal">目标定义<span>Goal</span></button>
+            <button type="button" data-target="skills">技能模块<span>Skills</span></button>
+            <button type="button" data-target="rules">规则约束<span>Rules</span></button>
+            <button type="button" data-target="workflow">工作流程<span>Workflow</span></button>
+            <button type="button" data-target="commands">命令系统<span>Commands</span></button>
+            <button type="button" data-target="extras">补充逻辑<span>Reminder / Init</span></button>
+          </nav>
+
+          <div>
+            <section class="tab-pane active" data-tab="base">
+              <div class="tab-card">
+                <h3 class="section-title">基础信息</h3>
+                <div class="grid two">
+                  <div class="field">
+                    <label for="roleName">角色名 Role</label>
+                    <input id="roleName" type="text" placeholder="如：爆款文案策划师">
+                  </div>
+                  <div class="field">
+                    <label for="language">默认语言 Language</label>
+                    <input id="language" type="text" placeholder="如：中文">
+                  </div>
+                </div>
+                <div class="grid two" style="margin-top: 14px;">
+                  <div class="field">
+                    <label for="author">作者 Author</label>
+                    <input id="author" type="text" placeholder="如：YourName">
+                  </div>
+                  <div class="field">
+                    <label for="version">版本 Version</label>
+                    <input id="version" type="text" placeholder="如：1.0">
+                  </div>
+                </div>
+                <div class="field" style="margin-top: 14px;">
+                  <label for="description">角色描述 Description</label>
+                  <textarea id="description" placeholder="简述角色定位、能力边界、主要价值。"></textarea>
+                </div>
+              </div>
+            </section>
+
+            <section class="tab-pane" data-tab="goal">
+              <div class="tab-card">
+                <h3 class="section-title">目标定义</h3>
+                <div class="grid two">
+                  <div class="field">
+                    <label for="outcome">目标 Outcome</label>
+                    <textarea id="outcome" placeholder="这次任务最终要交付什么结果。"></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="doneCriteria">完成标准 Done Criteria</label>
+                    <textarea id="doneCriteria" placeholder="怎样算完成，怎样算做得好。"></textarea>
+                  </div>
+                </div>
+                <div class="field" style="margin-top: 14px;">
+                  <label for="nonGoals">非目标 Non-Goals</label>
+                  <textarea id="nonGoals" placeholder="明确哪些内容不在本次任务范围内。"></textarea>
+                </div>
+              </div>
+            </section>
+
+            <section class="tab-pane" data-tab="skills">
+              <div class="tab-card">
+                <div class="tab-actions">
+                  <button class="btn-ghost" type="button" id="addSkill">新增技能</button>
+                </div>
+                <h3 class="section-title">技能 Skills</h3>
+                <div id="skillsContainer" class="stack"></div>
+              </div>
+            </section>
+
+            <section class="tab-pane" data-tab="rules">
+              <div class="tab-card">
+                <div class="tab-actions">
+                  <button class="btn-ghost" type="button" id="addRule">新增规则</button>
+                </div>
+                <h3 class="section-title">规则 Rules</h3>
+                <div id="rulesContainer" class="stack"></div>
+              </div>
+            </section>
+
+            <section class="tab-pane" data-tab="workflow">
+              <div class="tab-card">
+                <div class="tab-actions">
+                  <button class="btn-ghost" type="button" id="addWorkflow">新增步骤</button>
+                </div>
+                <h3 class="section-title">工作流 Workflow</h3>
+                <div id="workflowContainer" class="stack"></div>
+              </div>
+            </section>
+
+            <section class="tab-pane" data-tab="commands">
+              <div class="tab-card">
+                <div class="tab-actions">
+                  <button class="btn-ghost" type="button" id="addCommand">新增命令</button>
+                </div>
+                <h3 class="section-title">命令 Commands</h3>
+                <div id="commandsContainer" class="stack"></div>
+              </div>
+            </section>
+
+            <section class="tab-pane" data-tab="extras">
+              <div class="tab-card">
+                <h3 class="section-title">补充逻辑</h3>
+                <div class="grid">
+                  <div class="field">
+                    <label for="conditions">条件逻辑 Conditional Logic</label>
+                    <textarea id="conditions" placeholder="如：如果用户提供代码，则先分析问题再给修复方案。"></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="reminder">提醒 Reminder</label>
+                    <textarea id="reminder" placeholder="每行一条提醒，如：始终检查是否保持中文输出。"></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="initialization">初始化 Initialization</label>
+                    <textarea id="initialization" placeholder="留空则自动生成标准初始化语句。"></textarea>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel output">
+        <h2>标准 Prompt 预览</h2>
+        <div class="preview-meta">
+          <span id="statusText">已准备好生成结构化提示词</span>
+          <span id="charCount">0 字符</span>
+        </div>
+        <div class="toolbar" style="margin-bottom: 12px;">
+          <button class="btn-primary" type="button" id="copyBtn">复制 Prompt</button>
+          <button class="btn-secondary" type="button" id="resetBtn">重置内容</button>
+        </div>
+        <pre id="output"></pre>
+      </aside>
+    </section>
+  </div>
+
+  <template id="skillTemplate">
+    <div class="group-card" data-type="skill">
+      <div class="field">
+        <label>技能名称</label>
+        <input type="text" data-field="title" placeholder="如：擅长拆解用户意图">
+      </div>
+      <div class="field" style="margin-top: 12px;">
+        <label>技能要点</label>
+        <textarea data-field="items" placeholder="每行一条能力说明，生成时会自动转成编号列表。"></textarea>
+      </div>
+      <div class="row-actions" style="margin-top: 12px;">
+        <button class="btn-danger" type="button" data-remove="true">删除技能</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="ruleTemplate">
+    <div class="group-card" data-type="rule">
+      <div class="field">
+        <label>规则内容</label>
+        <textarea data-field="text" placeholder="如：不要编造不存在的数据或来源。"></textarea>
+      </div>
+      <div class="row-actions" style="margin-top: 12px;">
+        <button class="btn-danger" type="button" data-remove="true">删除规则</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="workflowTemplate">
+    <div class="group-card" data-type="workflow">
+      <div class="field">
+        <label>步骤说明</label>
+        <textarea data-field="text" placeholder="如：先识别用户目标，再确认约束条件，再输出结果。"></textarea>
+      </div>
+      <div class="row-actions" style="margin-top: 12px;">
+        <button class="btn-danger" type="button" data-remove="true">删除步骤</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="commandTemplate">
+    <div class="group-card" data-type="command">
+      <div class="grid two">
+        <div class="field">
+          <label>命令名</label>
+          <input type="text" data-field="name" placeholder="如：help">
+        </div>
+        <div class="field">
+          <label>命令说明</label>
+          <input type="text" data-field="desc" placeholder="如：显示所有可用命令">
+        </div>
+      </div>
+      <div class="row-actions" style="margin-top: 12px;">
+        <button class="btn-danger" type="button" data-remove="true">删除命令</button>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    const output = document.getElementById("output");
+    const statusText = document.getElementById("statusText");
+    const charCount = document.getElementById("charCount");
+    const navButtons = Array.from(document.querySelectorAll(".nav button"));
+    const tabPanes = Array.from(document.querySelectorAll(".tab-pane"));
+
+    const baseInputs = [
+      "roleName",
+      "language",
+      "author",
+      "version",
+      "description",
+      "outcome",
+      "doneCriteria",
+      "nonGoals",
+      "conditions",
+      "reminder",
+      "initialization"
+    ].map((id) => document.getElementById(id));
+
+    const containers = {
+      skill: document.getElementById("skillsContainer"),
+      rule: document.getElementById("rulesContainer"),
+      workflow: document.getElementById("workflowContainer"),
+      command: document.getElementById("commandsContainer")
+    };
+
+    const templates = {
+      skill: document.getElementById("skillTemplate"),
+      rule: document.getElementById("ruleTemplate"),
+      workflow: document.getElementById("workflowTemplate"),
+      command: document.getElementById("commandTemplate")
+    };
+
+    function lines(value) {
+      return value
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    function numbered(items) {
+      return items.map((item, index) => `${index + 1}. ${item}`);
+    }
+
+    function switchTab(tabName) {
+      tabPanes.forEach((pane) => {
+        pane.classList.toggle("active", pane.dataset.tab === tabName);
+      });
+      navButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.target === tabName);
+      });
+    }
+
+    navButtons.forEach((button) => {
+      button.addEventListener("click", () => switchTab(button.dataset.target));
+    });
+
+    function addBlock(type, preset = {}) {
+      const node = templates[type].content.firstElementChild.cloneNode(true);
+      node.querySelectorAll("[data-field]").forEach((field) => {
+        const key = field.dataset.field;
+        field.value = preset[key] || "";
+        field.addEventListener("input", renderPrompt);
+      });
+
+      node.querySelector("[data-remove]").addEventListener("click", () => {
+        node.remove();
+        renderPrompt();
+      });
+
+      containers[type].appendChild(node);
+      renderPrompt();
+    }
+
+    function getBlocks(type) {
+      return Array.from(containers[type].children).map((card) => {
+        const data = {};
+        card.querySelectorAll("[data-field]").forEach((field) => {
+          data[field.dataset.field] = field.value.trim();
+        });
+        return data;
+      });
+    }
+
+    function buildPrompt() {
+      const roleName = document.getElementById("roleName").value.trim() || "你的角色名称";
+      const language = document.getElementById("language").value.trim() || "中文";
+      const author = document.getElementById("author").value.trim();
+      const version = document.getElementById("version").value.trim();
+      const description = document.getElementById("description").value.trim();
+      const outcome = document.getElementById("outcome").value.trim();
+      const doneCriteria = document.getElementById("doneCriteria").value.trim();
+      const nonGoals = document.getElementById("nonGoals").value.trim();
+      const conditions = document.getElementById("conditions").value.trim();
+      const reminder = document.getElementById("reminder").value.trim();
+      const initCustom = document.getElementById("initialization").value.trim();
+
+      const skills = getBlocks("skill").filter((item) => item.title || item.items);
+      const rules = getBlocks("rule").map((item) => item.text).filter(Boolean);
+      const workflow = getBlocks("workflow").map((item) => item.text).filter(Boolean);
+      const commands = getBlocks("command").filter((item) => item.name || item.desc);
+
+      const prompt = [];
+      prompt.push(`# Role: ${roleName}`);
+
+      const profile = [];
+      if (author) profile.push(`- Author: ${author}`);
+      if (version) profile.push(`- Version: ${version}`);
+      profile.push(`- Language: ${language}`);
+      if (description) profile.push(`- Description: ${description}`);
+      if (profile.length) {
+        prompt.push("", "## Profile", "", ...profile);
+      }
+
+      const goals = [];
+      if (outcome) goals.push(`- Outcome: ${outcome}`);
+      if (doneCriteria) goals.push(`- Done Criteria: ${doneCriteria}`);
+      if (nonGoals) goals.push(`- Non-Goals: ${nonGoals}`);
+      if (goals.length) {
+        prompt.push("", "## Goal", "", ...goals);
+      }
+
+      if (skills.length) {
+        prompt.push("", "## Skills", "");
+        skills.forEach((skill, index) => {
+          const title = skill.title || `Skill-${index + 1}`;
+          prompt.push(`### ${title}`);
+          const items = lines(skill.items);
+          if (items.length) {
+            prompt.push(...numbered(items));
+          } else {
+            prompt.push("1. 请补充该技能的具体能力描述");
+          }
+          prompt.push("");
+        });
+        if (prompt[prompt.length - 1] === "") {
+          prompt.pop();
+        }
+      }
+
+      if (rules.length) {
+        prompt.push("", "## Rules", "", ...numbered(rules));
+      }
+
+      if (workflow.length) {
+        prompt.push("", "## Workflow", "", ...numbered(workflow));
+      }
+
+      if (commands.length) {
+        prompt.push("", "## Commands", "", "- Prefix: /", "- Commands:");
+        commands.forEach((command) => {
+          const name = command.name || "command";
+          const desc = command.desc || "请补充命令说明";
+          prompt.push(`  - ${name}: ${desc}`);
+        });
+      }
+
+      if (conditions) {
+        prompt.push("", "## Conditional Logic", "", conditions);
+      }
+
+      if (reminder) {
+        prompt.push("", "## Reminder", "", ...numbered(lines(reminder)));
+      }
+
+      const initialization = initCustom || "作为角色 <Role>，你必须遵守 <Rules>，使用默认 <Language> 与用户对话。先进行简短欢迎，再介绍你的能力边界，并按照 <Workflow> 开始工作。";
+      prompt.push("", "## Initialization", "", initialization);
+
+      return prompt.join("\n");
+    }
+
+    function renderPrompt() {
+      const prompt = buildPrompt();
+      output.textContent = prompt;
+      charCount.textContent = `${prompt.length} 字符`;
+      statusText.textContent = prompt.includes("你的角色名称")
+        ? "请先填写角色名，其他模块会同步更新"
+        : "已生成标准结构化提示词";
+    }
+
+    document.getElementById("addSkill").addEventListener("click", () => addBlock("skill"));
+    document.getElementById("addRule").addEventListener("click", () => addBlock("rule"));
+    document.getElementById("addWorkflow").addEventListener("click", () => addBlock("workflow"));
+    document.getElementById("addCommand").addEventListener("click", () => addBlock("command"));
+
+    baseInputs.forEach((input) => input.addEventListener("input", renderPrompt));
+
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(output.textContent);
+        statusText.textContent = "Prompt 已复制到剪贴板";
+      } catch (error) {
+        statusText.textContent = "复制失败，请手动选中右侧内容复制";
+      }
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      baseInputs.forEach((input) => {
+        input.value = "";
+      });
+      Object.values(containers).forEach((container) => {
+        container.innerHTML = "";
+      });
+      seedDefaults();
+      switchTab("base");
+      renderPrompt();
+    });
+
+    function seedDefaults() {
+      addBlock("skill", {
+        title: "核心能力",
+        items: "准确理解用户目标\n把模糊需求拆成清晰任务\n输出结构化、可执行的结果"
+      });
+      addBlock("rule", {
+        text: "不要编造事实，信息不足时应明确说明假设。"
+      });
+      addBlock("rule", {
+        text: "输出前检查是否符合用户目标、格式要求与语言要求。"
+      });
+      addBlock("workflow", {
+        text: "先分析用户输入，识别目标、限制条件与期望输出。"
+      });
+      addBlock("workflow", {
+        text: "再调用相关技能完成任务，必要时给出分步骤结果。"
+      });
+      addBlock("workflow", {
+        text: "最后自检内容质量，确保表达清晰、结构完整。"
+      });
+      addBlock("command", {
+        name: "help",
+        desc: "显示当前角色可用能力与使用方式"
+      });
+      addBlock("command", {
+        name: "improve",
+        desc: "在当前结果基础上继续优化质量"
+      });
+    }
+
+    seedDefaults();
+    switchTab("base");
+    renderPrompt();
+  </script>
+</body>
+</html>
